@@ -1,0 +1,12 @@
+# OS / editor cruft
+.DS_Store
+*.swp
+
+# Node
+node_modules/
+
+# relay.mjs run artifacts, if a user points --out-dir back into the repo
+.delegate/
+
+# local agent config symlink (see AGENTS.md)
+CLAUDE.md
