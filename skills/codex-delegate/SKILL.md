@@ -4,14 +4,11 @@ description: >-
   Delegate a coding task to the OpenAI Codex CLI as a background implementer, then review its diff and
   land it yourself. Use this whenever the user wants to hand implementation work to Codex — phrasings
   like "have Codex do X", "delegate this to Codex", "run it through Codex", or "use Codex to
-  implement/fix/refactor" — or wants to run a queue of coding tasks through Codex while staying the
-  reviewer. Prefer it over a one-shot Codex forwarder (such as the codex-rescue agent) specifically
-  when the user will review the resulting diff and commit it themselves, or wants the full
-  brief → dispatch → review → commit loop across a single task or a queue. Also reach for it proactively
-  for a separate implementation pass on a bounded, well-specified task (an implementation sweep, a
-  migration, a mechanical refactor, parallel work). Covers writing the Codex brief, dispatching it via
-  the bundled relay.mjs helper, waiting for completion, reviewing the result, and committing. DO NOT USE
-  for tasks small enough to do inline, or when the user wants the code written directly without
+  implement/fix/refactor" — or to run a queue of coding tasks through Codex while staying the reviewer.
+  Prefer it over a one-shot Codex forwarder (such as the codex-rescue agent) when the user will review
+  the resulting diff and commit it themselves. Also reach for it proactively for a separate
+  implementation pass on a bounded task — a migration, a mechanical refactor, a removal sweep. DO NOT
+  USE for tasks small enough to do inline, or when the user wants the code written directly without
   delegating.
 license: MIT
 compatibility: Requires the `codex` CLI (OpenAI Codex) installed and authenticated, Node 18+, and git. The orchestrating agent must be able to run shell commands and read files. Shell examples assume bash/zsh (macOS/Linux, or Git Bash/WSL on Windows).

@@ -36,6 +36,8 @@ CLI flag, field, and command in the docs must match the installed `codex` and `r
   `license`, `compatibility`, `metadata.version`, `allowed-tools`. The **`description` is the only
   triggering signal** — keep it to what the skill does and when to use it, phrased to trigger reliably.
   Provenance, status caveats, and how-it-works detail go in the body or here, never in the description.
+  Keep `description` **under 1024 characters** — some orchestrators (e.g. ZCode) hard-cap it and reject
+  the skill otherwise.
 - **Progressive disclosure:** keep `SKILL.md` lean; push depth into `references/*.md` that load only
   when needed.
 - **Executables:** keep them minimal and inspectable. The only one today is
