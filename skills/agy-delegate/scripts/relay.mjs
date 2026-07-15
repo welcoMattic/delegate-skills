@@ -56,6 +56,8 @@
  * Exit codes: a pre-run usage error (bad/missing args, empty brief) exits 2
  * before any run and writes no result file; a missing `agy` binary exits 127;
  * otherwise the exit code mirrors Antigravity's own (0 success, non-zero failure).
+ * If the child dies on a signal, the exit code is 128 plus the signal number and
+ * `result.json` records the signal.
  * Once the brief validates, `result.json` is written on every outcome -
  * completed, failed, or agy_unavailable. An orchestrator that polls for the
  * file must therefore also treat a non-zero exit with no file as a usage error.
@@ -64,7 +66,7 @@
 import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync, readFileSync, existsSync, appendFileSync } from "node:fs";
 import { join, resolve, basename } from "node:path";
-import { tmpdir } from "node:os";
+import { constants, tmpdir } from "node:os";
 
 const DEFAULT_PRINT_TIMEOUT = "30m";
 
@@ -112,7 +114,7 @@ function parseArgs(argv) {
       case "--sandbox": opts.sandbox = true; break;
       case "--dangerously-skip-permissions": opts.dangerouslySkipPermissions = true; break;
       case "--print-timeout": opts.printTimeout = next(); break;
-      case "--add-dir": opts.addDirs.push(resolve(next())); break;
+      case "--add-dir": opts.addDirs.push(next()); break;
       case "--out-dir": opts.outDir = resolve(next()); break;
       default:
         fail(`unknown option: ${arg}`);
@@ -130,6 +132,10 @@ function parseArgs(argv) {
   if (opts.newProject && (opts.resumeLast || opts.conversation)) {
     fail("--new-project cannot be combined with --resume-last or --conversation");
   }
+  // agy requires absolute --add-dir paths; resolve a relative one against --cd
+  // (not the relay's own cwd) - and only after the loop, since --add-dir may
+  // appear before --cd on the command line. resolve() passes absolutes through.
+  opts.addDirs = opts.addDirs.map((dir) => resolve(opts.cd, dir));
   return opts;
 }
 
@@ -303,7 +309,7 @@ function makeResultWriter(opts, version, run) {
 }
 
 function reportUnavailable(writeResult, resultPath) {
-  const result = writeResult({ status: "agy_unavailable", exitCode: 127, finalMessage: "", touchedFiles: null });
+  const result = writeResult({ status: "agy_unavailable", exitCode: 127, signal: null, finalMessage: "", touchedFiles: null });
   printSummary(result, resultPath);
   process.stderr.write("relay: `agy` not found on PATH. Install the Antigravity CLI and complete first-launch setup.\n");
   process.exit(127);
@@ -361,6 +367,7 @@ function dispatchToAgy(opts, brief, run, writeResult) {
     const result = writeResult({
       status: "failed",
       exitCode: 1,
+      signal: null,
       finalMessage,
       touchedFiles: gitTouchedFiles(opts.cd),
       error: String(err && err.message ? err.message : err),
@@ -369,19 +376,24 @@ function dispatchToAgy(opts, brief, run, writeResult) {
     process.exit(1);
   });
 
-  child.on("close", (code) => {
+  child.on("close", (code, signal) => {
     if (settled) return;
     settled = true;
     clearTimeout(watchdogTimer);
     if (sigkillTimer) clearTimeout(sigkillTimer);
     const finalMessage = stdout.trim();
     if (finalMessage) writeFileSync(run.finalPath, finalMessage, "utf8");
+    // A timed-out run is failed even if agy handles SIGTERM by exiting 0 -
+    // orchestrators key off status and the relay exit code.
+    const succeeded = code === 0 && !watchdogFired;
+    const mapped = code ?? (constants.signals[signal] ? 128 + constants.signals[signal] : 1);
     const result = writeResult({
-      status: code === 0 ? "completed" : "failed",
-      exitCode: code === null ? 1 : code,
+      status: succeeded ? "completed" : "failed",
+      exitCode: succeeded ? 0 : mapped === 0 ? 1 : mapped,
+      signal: signal ?? null,
       finalMessage,
       touchedFiles: gitTouchedFiles(opts.cd),
-      ...(code === 0 ? {} : { stderrTail: stderrTail.slice(-20) }),
+      ...(succeeded ? {} : { stderrTail: stderrTail.slice(-20) }),
       ...(watchdogFired ? { error: `agy did not exit within --print-timeout ${opts.printTimeout} plus 60s grace; killed by the relay watchdog` } : {}),
     });
     printSummary(result, run.resultPath);
@@ -418,7 +430,8 @@ function main() {
 function printSummary(result, resultPath) {
   const lines = [];
   lines.push("");
-  lines.push(`relay: ${result.status} (exit ${result.exitCode})  ·  agy ${result.agyVersion ?? "?"}`);
+  lines.push(`relay: ${result.status} (exit ${result.exitCode}${result.signal ? `, killed by ${result.signal}` : ""})  ·  agy ${result.agyVersion ?? "?"}`);
+  if (result.signal === "SIGKILL") lines.push("hint: the host killed the process (commonly the OOM killer or a supervisor timeout) — this is not an agy error; check host memory and re-dispatch, or split the task into smaller briefs.");
   if (result.resumed) lines.push("mode: resumed an existing conversation");
   if (result.projectId) lines.push(`project id: ${result.projectId}`);
   if (result.conversationId) lines.push(`conversation id (resume with: --conversation ${result.conversationId}): ${result.conversationId}`);

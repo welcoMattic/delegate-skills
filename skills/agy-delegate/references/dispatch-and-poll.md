@@ -37,7 +37,7 @@ Options:
 | `--sandbox` | Enable Antigravity's terminal sandbox for the run. |
 | `--dangerously-skip-permissions` | Pass Antigravity's permission-bypass flag. Never use this unless the human explicitly accepts it. |
 | `--print-timeout <duration>` | Timeout for print mode (default: `30m`). |
-| `--add-dir <dir>` | Add an extra workspace directory. Repeatable. Fresh runs always add the `--cd` repo (absolute path) as a workspace dir. |
+| `--add-dir <dir>` | Add an extra workspace directory. Repeatable; relative paths resolve against `--cd`. Fresh runs always add the `--cd` repo (absolute path) as a workspace dir. Edits inside extra workspaces are not reported in `touchedFiles`. |
 | `--out-dir <dir>` | Where artifacts go (default: a fresh dir under the system temp dir). |
 
 Artifacts default to the system temp dir on purpose: the repo under review stays clean, so the
@@ -50,7 +50,8 @@ touched-files report shows only Antigravity's edits and nothing of the helper's 
 - `schema` - the result-format version (currently `delegate-relay.result.v1`)
 - `tool` - `agy`
 - `status` - `completed` | `failed` | `agy_unavailable`
-- `exitCode` - mirrors Antigravity's exit code; `127` if `agy` is not on PATH
+- `exitCode` - mirrors Antigravity's exit code; `128` plus the signal number if the child was killed; `127` if `agy` is not on PATH
+- `signal` - the signal that killed the child, otherwise `null`
 - `agyVersion` - inferred from `agy changelog` when available
 - `projectId` / `conversationId` - parsed from the Antigravity log when present
 - `finalMessage` - Antigravity's stdout response
@@ -85,6 +86,9 @@ process has exited and `result.json` is written.
 
 - **`status: agy_unavailable` (exit 127):** `agy` is not on PATH. Install the Antigravity CLI and run
   its first-launch setup, then re-dispatch.
+- **`status: failed` with `signal: "SIGKILL"`:** the host ended the child - commonly the OOM killer
+  or a supervisor timeout, not an implementer error. Free up host memory or split the task into
+  smaller briefs, then re-dispatch.
 - **`status: failed`:** read `result.json`'s `stderrTail`, `stderrPath`, and `logPath` for the cause.
   Common causes: auth lapse, an unknown model label, timeout, or a permission the run needed.
 - **A run stalls on permissions:** either configure Antigravity permissions for the actions the task
