@@ -6,8 +6,9 @@ Skills for **delegating coding work to a separate CLI agent and landing it yours
 orchestrator) writes a self-contained brief, hands it to an implementer CLI, then reviews the diff and
 commits — staying the reviewer the whole way.
 
-Three skills ship today: **`codex-delegate`** drives the OpenAI Codex CLI, **`opencode-delegate`**
-drives the OpenCode CLI, and **`kimi-delegate`** drives the Kimi Code CLI. Same loop, different
+Five skills ship today: **`codex-delegate`** drives the OpenAI Codex CLI, **`opencode-delegate`**
+drives the OpenCode CLI, **`agy-delegate`** drives the Google Antigravity CLI, **`grok-delegate`**
+drives the Grok Build CLI, and **`kimi-delegate`** drives the Kimi Code CLI. Same loop, different
 implementer.
 
 ## Install
@@ -24,6 +25,8 @@ Install the package, or just one skill:
 npx skills add amElnagdy/delegate-skills
 npx skills add amElnagdy/delegate-skills --skill codex-delegate
 npx skills add amElnagdy/delegate-skills --skill opencode-delegate
+npx skills add amElnagdy/delegate-skills --skill agy-delegate
+npx skills add amElnagdy/delegate-skills --skill grok-delegate
 npx skills add amElnagdy/delegate-skills --skill kimi-delegate
 ```
 
@@ -49,7 +52,8 @@ The loop:
 ```text
 Use $codex-delegate to have Codex implement the refactor in services/billing/, then review and commit it.
 Use $codex-delegate to run this queue of migration tasks through Codex while I review each one.
-Use $kimi-delegate to have Kimi implement the UI cleanup, then review and commit it.
+Use $agy-delegate to have Antigravity implement the UI cleanup, then review and commit it.
+Use $kimi-delegate to have Kimi implement the login-form refactor, then review and commit it.
 ```
 
 ## How this differs from the OpenAI Codex plugin
@@ -92,6 +96,27 @@ quoting.
 **You'll feel it when:** a bounded task gets handed to OpenCode, comes back as a clean diff with a
 structured report and the run's cost, and you commit it after re-running the gates yourself.
 
+### agy-delegate
+
+Drive the Google Antigravity CLI (`agy`) as a background implementer: write the brief, dispatch via
+`relay.mjs`, review the diff, commit it yourself. Same four references and loop as the other delegate
+skills. Fresh runs start a new Antigravity project and explicitly add the target repo as the workspace;
+Antigravity's permission bypass is opt-in, not the default.
+
+**You'll feel it when:** a bounded task gets handed to Antigravity, comes back as a clean diff with a
+structured report and a conversation id, and you commit it after re-running the gates yourself.
+
+### grok-delegate
+
+Drive the Grok Build CLI (`grok`) as a background implementer: write the brief, dispatch via
+`relay.mjs`, review the diff, commit it yourself. Same four references and loop as the siblings.
+Autonomy is set explicitly because Grok's default is `ask` (which would hang a headless pipe) —
+default is `--always-approve --sandbox workspace`, `--read-only` uses `--sandbox read-only`, and
+`--full-access` is the unrestricted opt-in.
+
+**You'll feel it when:** a bounded task gets handed to Grok Build, comes back as a clean diff with a
+structured report, and you commit it after re-running the gates yourself.
+
 ### kimi-delegate
 
 Drive the Kimi Code CLI (`kimi`) as a background implementer: write the brief, dispatch via
@@ -113,6 +138,10 @@ Reserved so the umbrella can grow without a rename.
   (`codex login`).
 - For `opencode-delegate`: the [`opencode` CLI](https://opencode.ai) installed and authenticated
   (`opencode auth login`).
+- For `agy-delegate`: the [`agy` CLI](https://antigravity.google/docs/cli/getting-started) installed
+  and authenticated through Antigravity's first-launch setup.
+- For `grok-delegate`: the [`grok` CLI](https://x.ai/cli) (Grok Build) installed and authenticated
+  (`grok login`, or `XAI_API_KEY`; beta access needs an eligible xAI subscription).
 - For `kimi-delegate`: the [`kimi` CLI](https://moonshotai.github.io/kimi-code/en/) installed via
   Homebrew (`brew install kimi-code`) or the official native installer, and authenticated via
   `kimi login`.
@@ -127,16 +156,28 @@ This package is intentionally inspectable:
 - All skill content is Markdown, plus exactly **one** executable per skill — each a `scripts/relay.mjs`.
 - Each `relay.mjs` makes no network calls, reads or writes no credentials, sends no telemetry, and has
   no dependencies (Node built-ins only). It shells out only to its implementer CLI (`codex` /
-  `opencode` / `kimi`) and `git`. That CLI authenticates exactly as you do at the terminal. Read the
-  script before you run it.
-- None ever commits — committing is always the orchestrator's job, after review.
+  `opencode` / `agy` / `grok` / `kimi`) and `git`. That CLI authenticates exactly as you do at the
+  terminal. Read the script before you run it.
+- None of the relays ever commit — committing is always the orchestrator's job, after review.
 
 **Verification status:** each relay's mechanics are verified — argument handling, exit codes,
-`result.json`, resume, and (for `opencode-delegate`) the required-model guard, since OpenCode has no safe
-default. The full delegate → review → commit loop is designed for and run on Claude Code but not yet
-formally verified end-to-end here (OpenCode's cold start is slow in constrained shells, so exercise a
-real run in a normal terminal). Other orchestrators (Cursor, …) are designed-for but unproven. This line
-gets upgraded to "verified end-to-end" with evidence, not assumption.
+`result.json`, resume, and implementer-specific guards. `opencode-delegate` requires `--model`, since
+OpenCode has no safe default. `agy-delegate` is verified end-to-end on macOS against `agy` 1.0.16: a
+headless `agy --print` run edits the working tree, the brief is delivered via `--print=` (never split
+across argv), the workspace is pinned with an absolute `--add-dir`, and `result.json` carries the
+conversation id and touched files; the pre-run brief-size guard and the resume/project
+mutual-exclusion guards are exercised. `grok-delegate` is verified end-to-end on macOS against
+**grok 0.2.101**: a headless run streams `--output-format streaming-json`, the relay reconstructs
+`finalMessage` from the `text` events and the session id + token `usage` from the end event, default
+autonomy (`--always-approve --sandbox workspace`) edits the working tree headlessly, and
+`--resume-last` continues a prior session. **One caveat, confirmed by testing:** `--read-only` is
+*best-effort*, not enforced — grok's read-only sandbox restricts out-of-workspace access, not its own
+edit tool, so a headless run can still write the tree; the relay flags such runs with
+`readOnlyViolation`, and the diff, not the flag, is the guarantee. Windows launch is pending a native
+PowerShell/cmd smoke for both `agy-delegate` and `grok-delegate`. The full delegate → review → commit
+loop is designed for and run on Claude Code but not yet formally verified end-to-end here. Other
+orchestrators (Cursor, …) are designed-for but unproven. This line gets upgraded to "verified
+end-to-end" with evidence, not assumption.
 
 `kimi-delegate`'s relay mechanics are verified against `kimi` 0.24.0 on macOS (headless `-p` edit
 run, stream-json parsing, `--session`/`--continue` resume, unavailable/127); Windows launch is pending
@@ -155,6 +196,22 @@ skills/
 │       ├── review-and-land.md
 │       └── multi-task-queues.md
 ├── opencode-delegate/
+│   ├── SKILL.md
+│   ├── scripts/relay.mjs
+│   └── references/
+│       ├── writing-the-brief.md
+│       ├── dispatch-and-poll.md
+│       ├── review-and-land.md
+│       └── multi-task-queues.md
+├── agy-delegate/
+│   ├── SKILL.md
+│   ├── scripts/relay.mjs
+│   └── references/
+│       ├── writing-the-brief.md
+│       ├── dispatch-and-poll.md
+│       ├── review-and-land.md
+│       └── multi-task-queues.md
+├── grok-delegate/
 │   ├── SKILL.md
 │   ├── scripts/relay.mjs
 │   └── references/
