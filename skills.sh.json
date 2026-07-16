@@ -8,7 +8,8 @@
         "codex-delegate",
         "opencode-delegate",
         "agy-delegate",
-        "grok-delegate"
+        "grok-delegate",
+        "kimi-delegate"
       ]
     }
   ]
