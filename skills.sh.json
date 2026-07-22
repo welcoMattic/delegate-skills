@@ -10,6 +10,7 @@
         "agy-delegate",
         "grok-delegate",
         "kimi-delegate",
+        "copilot-delegate",
         "vibe-delegate"
       ]
     }

@@ -2,10 +2,10 @@
 
 This repo is a [Skills CLI](https://github.com/vercel-labs/skills) package of **delegation skills** —
 skills that let an orchestrating agent drive a separate CLI coding agent as an implementer, then review
-and land the result. Six skills ship today: `codex-delegate` (OpenAI Codex), `opencode-delegate`
+and land the result. Seven skills ship today: `codex-delegate` (OpenAI Codex), `opencode-delegate`
 (OpenCode), `agy-delegate` (Google Antigravity), `grok-delegate` (Grok Build), `kimi-delegate`
-(Kimi Code), and `vibe-delegate` (Mistral Vibe); siblings like `gemini-delegate` can be added later
-without renaming the repo.
+(Kimi Code), `copilot-delegate` (GitHub Copilot CLI), and `vibe-delegate` (Mistral Vibe); siblings
+like `gemini-delegate` can be added later without renaming the repo.
 
 ## Vocabulary
 
@@ -27,6 +27,7 @@ jargon. Use these terms; don't invent synonyms.
 | `project`, `conversation`, `model`, `permissions`, `sandbox`, `TUI`, `tasks`, `subagents` | Antigravity's own terms — use verbatim when discussing `agy` | don't use `subagents` as a generic synonym for implementer |
 | `session`, `sandbox` (`workspace`/`read-only`/`off`), `permission-mode`, `effort`, `streaming-json` | Grok Build's own terms — use verbatim when discussing `grok` | don't paraphrase them |
 | `session`, `--continue`, `model alias`, `auto permission mode`, `plan mode`, `--yolo` | Kimi Code's own terms — use verbatim when discussing `kimi` | don't paraphrase them |
+| `-p`, `--allow-all-tools`, `--allow-all`, `--allow-all-paths`, `--allow-all-urls`, `--deny-tool`, `--allow-tool`, `--available-tools`, `--excluded-tools`, `--no-ask-user`, `--autopilot`, `--max-autopilot-continues`, `--output-format`, `--add-dir`, `--agent`, `--continue`, `COPILOT_GITHUB_TOKEN` | GitHub Copilot CLI's own terms — use verbatim when discussing `copilot` | don't paraphrase them or borrow "sandbox" from other CLIs (Copilot has no sandbox enum) |
 | `--prompt`, `--output` (`streaming`/`json`/`text`), `--agent` (`plan`/`accept-edits`/`auto-approve`), `--max-turns`, `--trust`, `--resume`, `--continue`, `--enabled-tools`, `--disabled-tools` | Mistral Vibe's own terms — use verbatim when discussing `vibe` | don't invent a Vibe sandbox enum; don't use `--yolo` as a synonym for auto-approve agent |
 
 Banned on sight: coined umbrella terms in user-facing surfaces (README headings, `skills.sh.json`
@@ -51,9 +52,9 @@ CLI flag, field, and command in the docs must match the installed implementer CL
 - **Executables:** keep them minimal and inspectable. Today there is one per skill — a
   `scripts/relay.mjs` under each of `skills/codex-delegate/`, `skills/opencode-delegate/`,
   `skills/agy-delegate/`, `skills/grok-delegate/`, `skills/kimi-delegate/`, and
-  `skills/vibe-delegate/` — each Node built-ins
-  only, no dependencies, no network calls of its own, no credentials, no telemetry. New scripts must
-  hold the same line, and the README's trust section must stay accurate.
+  `skills/copilot-delegate/`, and `skills/vibe-delegate/` — each Node built-ins only, no
+  dependencies, no network calls of its own, no credentials, no telemetry. New scripts must hold
+  the same line, and the README's trust section must stay accurate.
 
 ## Before publishing a change
 
