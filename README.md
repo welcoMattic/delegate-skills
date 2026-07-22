@@ -6,7 +6,7 @@ Skills for **delegating coding work to a separate CLI agent and landing it yours
 orchestrator) writes a self-contained brief, hands it to an implementer CLI, then reviews the diff and
 commits — staying the reviewer the whole way.
 
-Six skills ship today — same loop, different implementer:
+Seven skills ship today — same loop, different implementer:
 
 | Skill | Drives | Autonomy | Resume |
 | --- | --- | --- | --- |
@@ -15,11 +15,8 @@ Six skills ship today — same loop, different implementer:
 | `agy-delegate` | Google Antigravity CLI (`agy`) | Antigravity's own permission policy; bypass is opt-in | `--resume-last`, `--conversation <id>` |
 | `grok-delegate` | Grok Build CLI (`grok`) | explicit: default workspace-scoped, `--read-only` best-effort with violation detection, `--full-access` opt-in | `--resume-last`, `--session <id>` |
 | `kimi-delegate` | Kimi Code CLI (`kimi`) | headless runs always use Kimi's auto permission mode | `--resume-last`, `--session <id>` |
-<<<<<<< HEAD
 | `copilot-delegate` | [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli) (`copilot`) | explicit: default `--allow-all-tools`, `--read-only` best-effort with violation detection, `--allow-all` opt-in | `--resume-last` |
-=======
 | `vibe-delegate` | [Mistral Vibe CLI](https://github.com/mistralai/mistral-vibe) (`vibe`) | `auto-approve` agent by default; `--plan-only` uses `plan` agent (best-effort read-only) | `--resume-last`, `--session <id>` |
->>>>>>> origin/master
 
 ## Install
 
@@ -105,7 +102,6 @@ Same loop for the Kimi Code CLI (`kimi`). Headless `kimi -p` always runs in Kimi
 mode (it rejects `--yolo`/`--auto`/`--plan` outright), so the skill is blunt about it: there is no
 CLI-enforced read-only mode — `touchedFiles` and the diff, not a flag, are the guarantee.
 
-<<<<<<< HEAD
 ### copilot-delegate
 
 Same loop for the GitHub Copilot CLI (`copilot`). Tool permissions are set explicitly to avoid
@@ -114,7 +110,7 @@ blocking on interactive prompts: `--allow-all-tools` by default, `--read-only` a
 flags `readOnlyViolation: true` when a read-only run writes anyway), and `--allow-all` as the
 explicit opt-in for full access. Includes `--autopilot` support for multi-step autonomous runs,
 bounded by `--max-autopilot-continues`.
-=======
+
 ### vibe-delegate
 
 Same loop for the Mistral Vibe CLI (`vibe`). The `auto-approve` agent is the default for headless
@@ -122,7 +118,6 @@ implementation work — it auto-approves all tool executions. `--plan-only` sele
 (exploration and planning, auto-approves only safe read tools) as a best-effort read-only mode.
 `--trust` is always passed to prevent interactive directory-trust prompts in headless runs. `--max-turns`
 is available for cost control. Vibe works on Windows but officially targets UNIX environments.
->>>>>>> origin/master
 
 ### gemini-delegate
 
@@ -152,12 +147,9 @@ bundled `relay.mjs` is the default because it needs nothing but the `codex` bina
   (`opencode auth login`) · `agy` (Antigravity's first-launch setup) ·
   `grok` (`npm i -g @xai-official/grok`, then `grok login`) ·
   [`kimi`](https://moonshotai.github.io/kimi-code/en/) (`brew install kimi-code`, then `kimi login`) ·
-<<<<<<< HEAD
-  `copilot` ([GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli), `npm i -g @github/copilot`, then `copilot login`; or set `COPILOT_GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_TOKEN`).
-=======
+  `copilot` ([GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli), `npm i -g @github/copilot`, then `copilot login`; or set `COPILOT_GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_TOKEN`) ·
   [`vibe`](https://github.com/mistralai/mistral-vibe) (`uv tool install mistral-vibe`, then configure
   `MISTRAL_API_KEY`).
->>>>>>> origin/master
 - Node 18+ and `git`.
 - An orchestrating agent that can run shell commands and read files.
 - Shell examples assume bash/zsh (macOS/Linux, or Git Bash/WSL on Windows).
@@ -183,23 +175,18 @@ This package is intentionally inspectable:
 - `kimi-delegate` — verified end-to-end on macOS against `kimi` 0.24.0 (headless `-p` edit run,
   stream-json parsing, `--session`/`--continue` resume).
 - `opencode-delegate` — requires `--model`, since OpenCode has no safe default.
-<<<<<<< HEAD
 - `copilot-delegate` — relay mechanics verified: argument handling, error codes, `result.json`
   contract, JSONL parsing, `copilot_unavailable` path, and read-only violation detection. End-to-end
   run against the `copilot` binary was not performed in this session (binary not installed in the
   build environment; authentication unavailable). JSONL event extraction is defensive across
   multiple possible event schemas. Windows is not yet smoke-tested.
-- Windows: the codex/opencode launches handle the `.cmd` shim (`shell:true` + quoting); the
-  copilot relay also uses `shell:true` on win32 for the `.cmd` shim but Windows smoke is pending;
-  native Windows launch smokes for `agy`/`grok`/`kimi` are still pending.
-=======
 - `vibe-delegate` — argument handling, exit codes, `result.json` shape, and the relay watchdog
   validated locally (`node relay.mjs --help` confirmed; end-to-end run against a live `vibe` binary
   not performed in this environment).
-- Windows: the codex/opencode launches handle the `.cmd` shim (`shell:true` + quoting); native Windows
-  launch smokes for `agy`/`grok`/`kimi` are still pending. Vibe officially targets UNIX environments;
-  consult the Mistral Vibe documentation for Windows guidance.
->>>>>>> origin/master
+- Windows: the codex/opencode launches handle the `.cmd` shim (`shell:true` + quoting); the
+  copilot relay also uses `shell:true` on win32 for the `.cmd` shim but Windows smoke is pending;
+  native Windows launch smokes for `agy`/`grok`/`kimi` are still pending. Vibe officially targets
+  UNIX environments; consult the Mistral Vibe documentation for Windows guidance.
 - The full delegate → review → commit loop is designed for and run on Claude Code; other orchestrators
   (Cursor, …) are designed-for but unproven.
 
