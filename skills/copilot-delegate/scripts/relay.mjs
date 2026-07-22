@@ -148,10 +148,13 @@ function parseArgs(argv) {
     fail(`--timeout "${opts.timeout}" is not a valid duration; use h/m/s strings like 30m, 90s, or 1h30m`);
   }
   // Token-validate values that reach the shell on win32 (shell:true for .cmd shim).
-  const safeToken = /^[A-Za-z0-9][A-Za-z0-9._:\/-]*$/;
+  // Forward slashes are excluded: model names (e.g., gpt-5.3-codex, claude-sonnet-4.6)
+  // and agent names don't require slashes, and allowing them on win32 could enable
+  // path-like sequences in a shell-interpolated command string.
+  const safeToken = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
   for (const flag of ["model", "agent"]) {
     if (opts[flag] !== null && !safeToken.test(opts[flag])) {
-      fail(`--${flag} value contains unsupported characters (allowed: letters, digits, . _ : / -)`);
+      fail(`--${flag} value contains unsupported characters (allowed: letters, digits, . _ : -)`);
     }
   }
   if (opts.maxAutopilotContinues !== null && !/^[1-9]\d*$/.test(opts.maxAutopilotContinues)) {
@@ -473,7 +476,16 @@ function dispatchToCopilot(opts, brief, run, writeResult) {
     // A timed-out run is failed even if Copilot handles SIGTERM by exiting 0.
     const succeeded = code === 0 && !watchdogFired;
     const mapped = code ?? (constants.signals[signal] ? 128 + constants.signals[signal] : 1);
-    const exitCode = succeeded ? 0 : mapped === 0 ? 1 : mapped;
+    // Avoid reporting exit 0 as success when the watchdog fired, and avoid
+    // mapping a null code (signal-only exit) to 0.
+    let exitCode;
+    if (succeeded) {
+      exitCode = 0;
+    } else if (mapped === 0) {
+      exitCode = 1;
+    } else {
+      exitCode = mapped;
+    }
     const finalMessage = assembleFinal();
     const touchedFiles = gitTouchedFiles(opts.cd);
     const result = writeResult({
@@ -538,7 +550,7 @@ function printSummary(result, resultPath) {
     `relay: ${result.status} (exit ${result.exitCode}${result.signal ? `, killed by ${result.signal}` : ""})` +
     `  ·  copilot ${result.copilotVersion ?? "?"}`
   );
-  if (result.signal === "SIGKILL") {
+  if (result.signal === "SIGKILL" && !result.error?.includes("relay watchdog")) {
     lines.push(
       "hint: the host killed the process (commonly the OOM killer or a supervisor timeout) — " +
       "this is not a copilot error; check host memory and re-dispatch, or split the task into smaller briefs."
