@@ -10,7 +10,11 @@
         "agy-delegate",
         "grok-delegate",
         "kimi-delegate",
+<<<<<<< HEAD
         "copilot-delegate"
+=======
+        "vibe-delegate"
+>>>>>>> origin/master
       ]
     }
   ]
