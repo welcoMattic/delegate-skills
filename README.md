@@ -6,7 +6,7 @@ Skills for **delegating coding work to a separate CLI agent and landing it yours
 orchestrator) writes a self-contained brief, hands it to an implementer CLI, then reviews the diff and
 commits — staying the reviewer the whole way.
 
-Five skills ship today — same loop, different implementer:
+Six skills ship today — same loop, different implementer:
 
 | Skill | Drives | Autonomy | Resume |
 | --- | --- | --- | --- |
@@ -15,6 +15,7 @@ Five skills ship today — same loop, different implementer:
 | `agy-delegate` | Google Antigravity CLI (`agy`) | Antigravity's own permission policy; bypass is opt-in | `--resume-last`, `--conversation <id>` |
 | `grok-delegate` | Grok Build CLI (`grok`) | explicit: default workspace-scoped, `--read-only` best-effort with violation detection, `--full-access` opt-in | `--resume-last`, `--session <id>` |
 | `kimi-delegate` | Kimi Code CLI (`kimi`) | headless runs always use Kimi's auto permission mode | `--resume-last`, `--session <id>` |
+| `copilot-delegate` | [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli) (`copilot`) | explicit: default `--allow-all-tools`, `--read-only` best-effort with violation detection, `--allow-all` opt-in | `--resume-last` |
 
 ## Install
 
@@ -53,6 +54,7 @@ The loop:
 ```text
 Use $codex-delegate to have Codex implement the refactor in services/billing/, then review and commit it.
 Use $kimi-delegate to have Kimi implement the UI cleanup, then review and commit it.
+Use $copilot-delegate to have Copilot CLI implement the API endpoint, then review and commit it.
 Use $codex-delegate to run this queue of migration tasks through Codex while I review each one.
 ```
 
@@ -99,6 +101,15 @@ Same loop for the Kimi Code CLI (`kimi`). Headless `kimi -p` always runs in Kimi
 mode (it rejects `--yolo`/`--auto`/`--plan` outright), so the skill is blunt about it: there is no
 CLI-enforced read-only mode — `touchedFiles` and the diff, not a flag, are the guarantee.
 
+### copilot-delegate
+
+Same loop for the GitHub Copilot CLI (`copilot`). Tool permissions are set explicitly to avoid
+blocking on interactive prompts: `--allow-all-tools` by default, `--read-only` as **best-effort**
+(deny rules are model-level constraints, not a hard sandbox — the relay snapshots the tree and
+flags `readOnlyViolation: true` when a read-only run writes anyway), and `--allow-all` as the
+explicit opt-in for full access. Includes `--autopilot` support for multi-step autonomous runs,
+bounded by `--max-autopilot-continues`.
+
 ### gemini-delegate
 
 *Planned.* A delegate skill for the Gemini CLI, if and when it gains a comparable non-interactive mode.
@@ -126,7 +137,8 @@ bundled `relay.mjs` is the default because it needs nothing but the `codex` bina
   [`codex`](https://github.com/openai/codex) (`codex login`) · [`opencode`](https://opencode.ai)
   (`opencode auth login`) · `agy` (Antigravity's first-launch setup) ·
   `grok` (`npm i -g @xai-official/grok`, then `grok login`) ·
-  [`kimi`](https://moonshotai.github.io/kimi-code/en/) (`brew install kimi-code`, then `kimi login`).
+  [`kimi`](https://moonshotai.github.io/kimi-code/en/) (`brew install kimi-code`, then `kimi login`) ·
+  `copilot` ([GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli), `npm i -g @github/copilot`, then `copilot login`; or set `COPILOT_GITHUB_TOKEN`/`GH_TOKEN`/`GITHUB_TOKEN`).
 - Node 18+ and `git`.
 - An orchestrating agent that can run shell commands and read files.
 - Shell examples assume bash/zsh (macOS/Linux, or Git Bash/WSL on Windows).
@@ -152,8 +164,14 @@ This package is intentionally inspectable:
 - `kimi-delegate` — verified end-to-end on macOS against `kimi` 0.24.0 (headless `-p` edit run,
   stream-json parsing, `--session`/`--continue` resume).
 - `opencode-delegate` — requires `--model`, since OpenCode has no safe default.
-- Windows: the codex/opencode launches handle the `.cmd` shim (`shell:true` + quoting); native Windows
-  launch smokes for `agy`/`grok`/`kimi` are still pending.
+- `copilot-delegate` — relay mechanics verified: argument handling, error codes, `result.json`
+  contract, JSONL parsing, `copilot_unavailable` path, and read-only violation detection. End-to-end
+  run against the `copilot` binary was not performed in this session (binary not installed in the
+  build environment; authentication unavailable). JSONL event extraction is defensive across
+  multiple possible event schemas. Windows is not yet smoke-tested.
+- Windows: the codex/opencode launches handle the `.cmd` shim (`shell:true` + quoting); the
+  copilot relay also uses `shell:true` on win32 for the `.cmd` shim but Windows smoke is pending;
+  native Windows launch smokes for `agy`/`grok`/`kimi` are still pending.
 - The full delegate → review → commit loop is designed for and run on Claude Code; other orchestrators
   (Cursor, …) are designed-for but unproven.
 
